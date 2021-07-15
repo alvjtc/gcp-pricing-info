@@ -19,6 +19,7 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/alvjtc/gcp-pricing-info/internal/healthcheck"
 	"github.com/gorilla/mux"
 )
 
@@ -27,15 +28,7 @@ var port = ":" + os.Getenv("PORT")
 func main() {
 	s := mux.NewRouter()
 
-	s.HandleFunc("/healthcheck", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
-
-		_, err := w.Write([]byte(`{"message":"Server is up and running"}`))
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-		}
-	})
+	s.HandleFunc("/healthcheck", healthcheck.Handler).Methods("GET")
 
 	if port == ":" {
 		port = ":8080"
