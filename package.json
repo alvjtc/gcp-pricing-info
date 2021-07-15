@@ -1,6 +1,6 @@
 {
   "name": "gcp-pricing-info",
-  "version": "0.1.0",
+  "version": "1",
   "devDependencies": {
     "semantic-release": "^17.0.0"
   },

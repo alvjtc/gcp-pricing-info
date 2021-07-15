@@ -1,0 +1,12 @@
+openapi: 3.0.3
+info:
+  title: GCP Pricing API
+  description: GCP Pricing API
+  version: '1'
+paths:
+  /v1/healthcheck:
+    get:
+      summary: Returns a simple message to verify that the API is working.
+      responses:
+        '200':
+          description: OK
