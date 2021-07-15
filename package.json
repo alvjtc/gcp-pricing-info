@@ -1,0 +1,7 @@
+{
+  "name": "gcp-pricing-info",
+  "version": "0.1.0",
+  "release": {
+    "branches": ["main"]
+  }
+}
