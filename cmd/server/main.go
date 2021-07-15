@@ -28,7 +28,7 @@ var port = ":" + os.Getenv("PORT")
 func main() {
 	s := mux.NewRouter()
 
-	s.HandleFunc("/healthcheck", healthcheck.Handler).Methods("GET")
+	s.HandleFunc("/healthcheck", healthcheck.Handler).Methods(http.MethodGet)
 
 	if port == ":" {
 		port = ":8080"
