@@ -1,0 +1,20 @@
+{
+  "compute": {
+    "region": [
+      {
+        "name": "europe-west1",
+        "family": [
+          {
+            "name": "n1",
+            "cpu": "9431-52B1-2C4F",
+            "cpu1y": "4F49-1FC5-D994",
+            "cpu3y": "20F3-B410-FB36",
+            "ram": "39F4-0112-6F39",
+            "ram1y": "0FCC-C885-6989",
+            "ram3y": "B1FD-24D4-0892"
+          }
+        ]
+      }
+    ]
+  }
+}
