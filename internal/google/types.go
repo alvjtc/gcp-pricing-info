@@ -17,7 +17,7 @@ package google
 import "google.golang.org/api/cloudbilling/v1"
 
 const (
-	// ComputeSKU SKU Id for Google Compute Engine.
+	// ComputeSKU SKU ID for Google Compute Engine.
 	ComputeSKU = "services/6F81-5844-456A"
 )
 

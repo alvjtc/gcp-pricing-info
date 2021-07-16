@@ -15,16 +15,86 @@
 package compute
 
 import (
+	"encoding/json"
+	"github.com/alvjtc/gcp-pricing-info/internal/google"
 	"net/http"
+	"net/url"
+	"strconv"
 )
 
-// Handler responds to a HealthCheck request to verify that the API is running
-func Handler(w http.ResponseWriter, _ *http.Request) {
+// Handler responds to an HTTP request to get the pricing info for Compute.
+func Handler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
+
+	err := r.ParseForm()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	params, err := parseRequest(r.Form)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	price, err := getPrice(google.Services.BillingService, params)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
 	w.WriteHeader(http.StatusOK)
 
-	_, err := w.Write([]byte(`{"message":"Compute service"}`))
+	err = json.NewEncoder(w).Encode(price)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
+}
+
+func parseRequest(v url.Values) (ret Request, err error) {
+	values := map[string]interface{}{
+		"region": "", "family": "", "billing": "", "os": "", "instances": 0, "ram": 0.0, "hours": 0.0, "cpu": 0.0,
+	}
+
+	paramsStr := []string{"region", "family", "billing", "os"}
+	paramsInt := []string{"instances"}
+	paramsFloat := []string{"ram", "hours", "cpu"}
+
+	for _, p := range paramsStr {
+		if v[p] != nil {
+			values[p] = v[p][0]
+		}
+	}
+
+	for _, p := range paramsInt {
+		if v[p] != nil {
+			values[p], err = strconv.Atoi(v[p][0])
+			if err != nil {
+				return ret, err
+			}
+		}
+	}
+
+	for _, p := range paramsFloat {
+		if v[p] != nil {
+			values[p], err = strconv.ParseFloat(v[p][0], 64)
+			if err != nil {
+				return ret, err
+			}
+		}
+	}
+
+	ret = Request{
+		values["instances"].(int),
+		values["region"].(string),
+		values["family"].(string),
+		values["cpu"].(float64),
+		values["ram"].(float64),
+		values["billing"].(string),
+		values["hours"].(float64),
+		values["os"].(string),
+	}
+
+	return ret, nil
 }
