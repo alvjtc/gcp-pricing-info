@@ -12,36 +12,19 @@
 //See the License for the specific language governing permissions and
 //limitations under the License.
 
-package main
+package compute
 
 import (
-	"github.com/alvjtc/gcp-pricing-info/internal/api/compute"
-	"github.com/alvjtc/gcp-pricing-info/internal/api/healthcheck"
-	"github.com/alvjtc/gcp-pricing-info/internal/google"
-	"log"
 	"net/http"
-	"os"
-
-	"github.com/gorilla/mux"
 )
 
-var port = ":" + os.Getenv("PORT")
+// Handler responds to a HealthCheck request to verify that the API is running
+func Handler(w http.ResponseWriter, _ *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
 
-func main() {
-	err := google.Services.NewGoogler()
+	_, err := w.Write([]byte(`{"message":"Compute service"}`))
 	if err != nil {
-		log.Fatal(err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
-
-	s := mux.NewRouter()
-
-	s.HandleFunc("/v1/healthcheck", healthcheck.Handler).Methods(http.MethodGet)
-	s.HandleFunc("/v1/compute", compute.Handler).Methods(http.MethodGet)
-
-	if port == ":" {
-		port = ":8080"
-	}
-
-	log.Println("Running server on host", port)
-	log.Fatal(http.ListenAndServe(port, s))
 }
