@@ -35,12 +35,20 @@ func main() {
 
 	s := mux.NewRouter()
 
+	// HealthCheck Endpoint
 	s.HandleFunc("/v1/healthcheck", healthcheck.Handler).Methods(http.MethodGet)
+
+	// Compute Endpoint
 	s.HandleFunc("/v1/compute", compute.Handler).Methods(http.MethodGet)
+	if compute.SKUData, err = compute.InitData(); err != nil {
+		log.Fatal(err)
+	}
 
 	if port == ":" {
 		port = ":8080"
 	}
+
+	//fmt.Println(compute.SKUData.Compute.europe-west1.n1.cpu)
 
 	log.Println("Running server on host", port)
 	log.Fatal(http.ListenAndServe(port, s))
