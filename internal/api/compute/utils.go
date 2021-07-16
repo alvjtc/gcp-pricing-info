@@ -14,7 +14,13 @@
 
 package compute
 
+import "google.golang.org/api/cloudbilling/v1"
+
 const hoursInMonth = 730
+
+func getPrice(service *cloudbilling.APIService, param Request) (p Price, err error) {
+	return Price{}, nil
+}
 
 func getSUD(h float64) (r SUD) {
 	const q = hoursInMonth * 0.25
