@@ -14,12 +14,88 @@
 
 package compute
 
-import "google.golang.org/api/cloudbilling/v1"
+import (
+	"context"
+	"errors"
+	"strings"
+
+	"google.golang.org/api/cloudbilling/v1"
+
+	"github.com/alvjtc/gcp-pricing-info/internal/google"
+)
 
 const hoursInMonth = 730
 
-func getPrice(service *cloudbilling.APIService, param Request) (p Price, err error) {
-	return Price{}, nil
+func getPrice(svc *cloudbilling.APIService, r Request) (p Price, err error) {
+	if !isValidRequest(r) {
+		return Price{}, errors.New("invalid request")
+	}
+
+	cpuSKUId := SKUData[r.Region][r.Family]["cpu"]
+	if cpuSKUId == "" {
+		return p, errors.New("invalid parameters")
+	}
+
+	ramSKUId := SKUData[r.Region][r.Family]["ram"]
+	if ramSKUId == "" {
+		return p, errors.New("invalid parameters")
+	}
+
+	foundCPU, foundRAM, foundOS := false, false, false
+
+	if r.Os == "linux" {
+		foundOS = true
+	}
+
+	err = svc.Services.Skus.List(google.ComputeSKU).Pages(context.Background(), func(res *cloudbilling.ListSkusResponse) (err error) {
+		if foundCPU && foundRAM && foundOS {
+			return
+		}
+
+		for _, sku := range res.Skus {
+			switch sku.SkuId {
+			case cpuSKUId:
+				foundCPU = true
+				price := float64(sku.PricingInfo[0].PricingExpression.TieredRates[0].UnitPrice.Units) +
+					float64(sku.PricingInfo[0].PricingExpression.TieredRates[0].UnitPrice.Nanos)*1e-9
+				price *= r.CPU
+				p.ComputePrice += price
+			case ramSKUId:
+				foundRAM = true
+				price := float64(sku.PricingInfo[0].PricingExpression.TieredRates[0].UnitPrice.Units) +
+					float64(sku.PricingInfo[0].PricingExpression.TieredRates[0].UnitPrice.Nanos)*1e-9
+				price *= r.RAM
+				p.ComputePrice += price
+			}
+
+			if foundCPU && foundRAM && foundOS {
+				p.applySUD(r.Billing, r.Hours, r.Family)
+				p.applyOsPrice(r)
+				p.ComputePrice, p.EffectiveTime = p.ComputePrice*float64(r.Instances), sku.PricingInfo[0].EffectiveTime
+
+				return
+			}
+		}
+		return
+	})
+	if err != nil {
+		return p, err
+	}
+
+	p.Currency = "USD"
+	return p, nil
+}
+
+func isValidRequest(r Request) bool {
+	return !(r.Hours > 730) && !(r.CPU < 0.0) && !(r.Instances < 0) && !(r.RAM < 0.0)
+}
+
+func (p *Price) applyOsPrice(r Request) {
+	if strings.Contains(r.Family, "f1") || strings.Contains(r.Family, "g1") {
+		p.OsPrice *= r.Hours
+	} else {
+		p.OsPrice *= r.Hours * r.CPU
+	}
 }
 
 func getSUD(h float64) (r SUD) {
