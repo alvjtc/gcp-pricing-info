@@ -55,47 +55,6 @@ func getPrice(svc *cloudbilling.APIService, r Request) (p Price, err error) {
 	p.Currency = "USD"
 	return p, nil
 
-	/*foundCPU, foundRAM, foundOS := false, false, false
-
-	if r.Os == "linux" {
-		foundOS = true
-	}
-
-	err = svc.Services.Skus.List(google.ComputeSKU).Pages(context.Background(), func(res *cloudbilling.ListSkusResponse) (err error) {
-		if foundCPU && foundRAM && foundOS {
-			return
-		}
-
-		for _, sku := range res.Skus {
-			switch sku.SkuId {
-			case cpuSKUId:
-				foundCPU = true
-				price := float64(sku.PricingInfo[0].PricingExpression.TieredRates[0].UnitPrice.Units) +
-					float64(sku.PricingInfo[0].PricingExpression.TieredRates[0].UnitPrice.Nanos)*1e-9
-				price *= r.CPU
-				p.ComputePrice += price
-			case ramSKUId:
-				foundRAM = true
-				price := float64(sku.PricingInfo[0].PricingExpression.TieredRates[0].UnitPrice.Units) +
-					float64(sku.PricingInfo[0].PricingExpression.TieredRates[0].UnitPrice.Nanos)*1e-9
-				price *= r.RAM
-				p.ComputePrice += price
-			}
-
-			if foundCPU && foundRAM && foundOS {
-				p.applySUD(r.Billing, r.Hours, r.Family)
-				p.applyOsPrice(r)
-				p.ComputePrice, p.EffectiveTime = p.ComputePrice*float64(r.Instances), sku.PricingInfo[0].EffectiveTime
-
-				return
-			}
-		}
-		return
-	})
-	if err != nil {
-		return p, err
-	}
-	*/
 	p.Currency = "USD"
 	return p, nil
 }
