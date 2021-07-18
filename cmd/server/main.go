@@ -60,7 +60,7 @@ func main() {
 
 	// Compute Endpoint
 	s.HandleFunc("/v1/compute", compute.Handler).Methods(http.MethodGet)
-	compute.SKUList = compute.InitData()
+	compute.SkuVMList = compute.InitData()
 
 	if port == ":" {
 		port = ":8080"

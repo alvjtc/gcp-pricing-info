@@ -16,46 +16,40 @@ package compute
 
 import (
 	"errors"
-	"strings"
-
-	"google.golang.org/api/cloudbilling/v1"
 )
 
 const hoursInMonth = 730
 
-func getPrice(svc *cloudbilling.APIService, r Request) (p Price, err error) {
+func getPrice(r Request) (p Price, err error) {
 	if !isValidRequest(r) {
 		return Price{}, errors.New("invalid request")
 	}
 
-	cpuSKUId := SKUList[r.Region][r.Family]["cpu"]
+	cpuSKUId := SkuVMList[r.Region][r.Family]["cpu"]
 	if cpuSKUId == "" {
 		return p, errors.New("invalid parameters")
 	}
 
-	ramSKUId := SKUList[r.Region][r.Family]["ram"]
+	ramSKUId := SkuVMList[r.Region][r.Family]["ram"]
 	if ramSKUId == "" {
 		return p, errors.New("invalid parameters")
 	}
 
-	price := r.CPU * (float64(SKUPriceList[cpuSKUId].PricingExpression.TieredRates[0].UnitPrice.Units) +
-		float64(SKUPriceList[cpuSKUId].PricingExpression.TieredRates[0].UnitPrice.Nanos)*1e-9)
+	price := r.CPU * (float64(SkuPriceList[cpuSKUId].PricingExpression.TieredRates[0].UnitPrice.Units) +
+		float64(SkuPriceList[cpuSKUId].PricingExpression.TieredRates[0].UnitPrice.Nanos)*1e-9)
 
 	p.ComputePrice += price
 
-	price = r.RAM * (float64(SKUPriceList[ramSKUId].PricingExpression.TieredRates[0].UnitPrice.Units) +
-		float64(SKUPriceList[ramSKUId].PricingExpression.TieredRates[0].UnitPrice.Nanos)*1e-9)
+	price = r.RAM * (float64(SkuPriceList[ramSKUId].PricingExpression.TieredRates[0].UnitPrice.Units) +
+		float64(SkuPriceList[ramSKUId].PricingExpression.TieredRates[0].UnitPrice.Nanos)*1e-9)
 
 	p.ComputePrice += price
 
 	p.applySUD(r.Billing, r.Hours, r.Family)
 	p.applyOsPrice(r)
-	p.ComputePrice, p.EffectiveTime = p.ComputePrice*float64(r.Instances), SKUPriceList[cpuSKUId].EffectiveTime
 
-	p.Currency = "USD"
-	return p, nil
+	p.ComputePrice, p.EffectiveTime, p.Currency = p.ComputePrice*float64(r.Instances), SkuPriceList[cpuSKUId].EffectiveTime, "USD"
 
-	p.Currency = "USD"
 	return p, nil
 }
 
@@ -64,11 +58,24 @@ func isValidRequest(r Request) bool {
 }
 
 func (p *Price) applyOsPrice(r Request) {
-	if strings.Contains(r.Family, "f1") || strings.Contains(r.Family, "g1") {
-		p.OsPrice *= r.Hours
-	} else {
-		p.OsPrice *= r.Hours * r.CPU
+	var skuOS string
+
+	switch r.Os {
+	case "windows":
+		switch r.Family {
+		case "f1":
+			skuOS = SkuOSList["f1"]
+		case "g1":
+			skuOS = SkuOSList["f1"]
+		default:
+			skuOS = SkuOSList["global"]
+		}
+	default:
+		return
 	}
+
+	p.OsPrice = r.Hours * r.CPU * (float64(SkuPriceList[skuOS].PricingExpression.TieredRates[0].UnitPrice.Units) +
+		float64(SkuPriceList[skuOS].PricingExpression.TieredRates[0].UnitPrice.Nanos)*1e-9)
 }
 
 func getSUD(h float64) (r SUD) {
