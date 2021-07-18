@@ -16,7 +16,6 @@ package compute
 
 import (
 	"encoding/json"
-	"github.com/alvjtc/gcp-pricing-info/internal/google"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -39,7 +38,7 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	price, err := getPrice(google.Services.BillingService, params)
+	price, err := getPrice(params)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
