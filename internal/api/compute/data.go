@@ -14,78 +14,56 @@
 
 package compute
 
-/*type skuDataJSON struct {
-	Compute struct {
-		Region []struct {
-			Name   string `json:"name"`
-			Family []struct {
-				Name  string `json:"name"`
-				Cpu   string `json:"cpu"`
-				Cpu1y string `json:"cpu1y"`
-				Cpu3y string `json:"cpu3y"`
-				Ram   string `json:"ram"`
-				Ram1y string `json:"ram1y"`
-				Ram3y string `json:"ram3y"`
-			}
-		}
-	}
-}
+import (
+	"context"
 
-var SKUData skuDataJSON
+	"google.golang.org/api/cloudbilling/v1"
 
-func InitData() (skuDataJSON, error) {
-	var data skuDataJSON
-
-	filePath, err := filepath.Abs("./internal/data/skus.json")
-	if err != nil {
-		return data, err
-	}
-
-	jsonFile, err := os.Open(string(filePath))
-	if err != nil {
-		return data, err
-	}
-
-	defer func(jsonFile *os.File) {
-		err := jsonFile.Close()
-		if err != nil {
-
-		}
-	}(jsonFile)
-
-	byteValue, _ := ioutil.ReadAll(jsonFile)
-	err = json.Unmarshal(byteValue, &data)
-	if err != nil {
-		return data, err
-	}
-
-	return data, nil
-}*/
+	"github.com/alvjtc/gcp-pricing-info/internal/google"
+)
 
 type SKU = map[string]map[string]map[string]string
+type SKUPrice = map[string]*cloudbilling.PricingInfo
 
-var SKUData SKU
+var SKUList SKU
+var SKUPriceList SKUPrice
 
 func InitData() SKU {
-	SKUData = make(map[string]map[string]map[string]string)
+	SKUList = make(map[string]map[string]map[string]string)
 
-	SKUData["europe-west1"] = make(map[string]map[string]string)
+	SKUList["europe-west1"] = make(map[string]map[string]string)
 
-	SKUData["europe-west1"]["n1"] = make(map[string]string)
-	SKUData["europe-west1"]["n1"]["cpu"] = "9431-52B1-2C4F"
-	SKUData["europe-west1"]["n1"]["cpu1y"] = "4F49-1FC5-D994"
-	SKUData["europe-west1"]["n1"]["cpu3y"] = "20F3-B410-FB36"
-	SKUData["europe-west1"]["n1"]["ram"] = "39F4-0112-6F39"
-	SKUData["europe-west1"]["n1"]["ram1y"] = "0FCC-C885-6989"
-	SKUData["europe-west1"]["n1"]["ram3y"] = "B1FD-24D4-0892"
+	SKUList["europe-west1"]["n1"] = make(map[string]string)
+	SKUList["europe-west1"]["n1"]["cpu"] = "9431-52B1-2C4F"
+	SKUList["europe-west1"]["n1"]["cpu1y"] = "4F49-1FC5-D994"
+	SKUList["europe-west1"]["n1"]["cpu3y"] = "20F3-B410-FB36"
+	SKUList["europe-west1"]["n1"]["ram"] = "39F4-0112-6F39"
+	SKUList["europe-west1"]["n1"]["ram1y"] = "0FCC-C885-6989"
+	SKUList["europe-west1"]["n1"]["ram3y"] = "B1FD-24D4-0892"
 
-	SKUData["europe-west1"]["n2"] = make(map[string]string)
-	SKUData["europe-west1"]["n2"]["cpu"] = "9F61-45D7-D4FB"
-	SKUData["europe-west1"]["n2"]["cpu1y"] = "A121-1D02-4CFA"
-	SKUData["europe-west1"]["n2"]["cpu3y"] = "1438-08DD-CC18"
-	SKUData["europe-west1"]["n2"]["ram"] = "A109-54C1-7CB0"
-	SKUData["europe-west1"]["n2"]["ram1y"] = "E6C5-0BFA-F6A6"
-	SKUData["europe-west1"]["n2"]["ram3y"] = "FEA1-DB7A-4C41"
+	SKUList["europe-west1"]["n2"] = make(map[string]string)
+	SKUList["europe-west1"]["n2"]["cpu"] = "9F61-45D7-D4FB"
+	SKUList["europe-west1"]["n2"]["cpu1y"] = "A121-1D02-4CFA"
+	SKUList["europe-west1"]["n2"]["cpu3y"] = "1438-08DD-CC18"
+	SKUList["europe-west1"]["n2"]["ram"] = "A109-54C1-7CB0"
+	SKUList["europe-west1"]["n2"]["ram1y"] = "E6C5-0BFA-F6A6"
+	SKUList["europe-west1"]["n2"]["ram3y"] = "FEA1-DB7A-4C41"
 
-	return SKUData
+	return SKUList
+}
+
+func InitSKUPriceList(svc *cloudbilling.APIService) error {
+	SKUPriceList = make(map[string]*cloudbilling.PricingInfo)
+
+	err := svc.Services.Skus.List(google.ComputeSKU).Pages(context.Background(), func(res *cloudbilling.ListSkusResponse) (err error) {
+		for _, sku := range res.Skus {
+			SKUPriceList[sku.SkuId] = sku.PricingInfo[0]
+		}
+		return
+	})
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

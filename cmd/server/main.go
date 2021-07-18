@@ -18,20 +18,40 @@ import (
 	"github.com/alvjtc/gcp-pricing-info/internal/api/compute"
 	"github.com/alvjtc/gcp-pricing-info/internal/api/healthcheck"
 	"github.com/alvjtc/gcp-pricing-info/internal/google"
+	"github.com/gorilla/mux"
 	"log"
 	"net/http"
 	"os"
-
-	"github.com/gorilla/mux"
+	"strconv"
+	"time"
 )
 
 var port = ":" + os.Getenv("PORT")
+var cacheInterval = os.Getenv("CACHE_INTERVAL")
 
 func main() {
-	err := google.Services.NewGoogler()
+	if cacheInterval == "" {
+		cacheInterval = "60"
+	}
+
+	cacheIntervalValue, err := strconv.Atoi(cacheInterval)
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	err = google.Services.NewGoogler()
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Println("Connected to Google Services")
+
+	cacheComputeBilling()
+
+	go func() {
+		for range time.Tick(time.Minute * time.Duration(cacheIntervalValue)) {
+			cacheComputeBilling()
+		}
+	}()
 
 	s := mux.NewRouter()
 
@@ -40,12 +60,20 @@ func main() {
 
 	// Compute Endpoint
 	s.HandleFunc("/v1/compute", compute.Handler).Methods(http.MethodGet)
-	compute.SKUData = compute.InitData()
+	compute.SKUList = compute.InitData()
 
 	if port == ":" {
 		port = ":8080"
 	}
 
-	log.Println("Running server on host", port)
+	hostname, _ := os.Hostname()
+	log.Printf("Running server on host %s%s\n", hostname, port)
 	log.Fatal(http.ListenAndServe(port, s))
+}
+
+func cacheComputeBilling() {
+	if err := compute.InitSKUPriceList(google.Services.BillingService); err != nil {
+		log.Fatal(err)
+	}
+	log.Println("Cached Google Compute Billing data")
 }
