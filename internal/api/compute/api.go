@@ -20,6 +20,7 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"strings"
 )
 
 // Handler responds to an HTTP request to get the pricing info for Compute.
@@ -63,7 +64,7 @@ func parseRequest(v url.Values) (ret Request, err error) {
 
 	for _, p := range paramsStr {
 		if v[p] != nil {
-			values[p] = v[p][0]
+			values[p] = strings.ToLower(v[p][0])
 		}
 	}
 

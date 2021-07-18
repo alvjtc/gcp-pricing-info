@@ -15,13 +15,10 @@
 package compute
 
 import (
-	"context"
 	"errors"
 	"strings"
 
 	"google.golang.org/api/cloudbilling/v1"
-
-	"github.com/alvjtc/gcp-pricing-info/internal/google"
 )
 
 const hoursInMonth = 730
@@ -31,17 +28,34 @@ func getPrice(svc *cloudbilling.APIService, r Request) (p Price, err error) {
 		return Price{}, errors.New("invalid request")
 	}
 
-	cpuSKUId := SKUData[r.Region][r.Family]["cpu"]
+	cpuSKUId := SKUList[r.Region][r.Family]["cpu"]
 	if cpuSKUId == "" {
 		return p, errors.New("invalid parameters")
 	}
 
-	ramSKUId := SKUData[r.Region][r.Family]["ram"]
+	ramSKUId := SKUList[r.Region][r.Family]["ram"]
 	if ramSKUId == "" {
 		return p, errors.New("invalid parameters")
 	}
 
-	foundCPU, foundRAM, foundOS := false, false, false
+	price := r.CPU * (float64(SKUPriceList[cpuSKUId].PricingExpression.TieredRates[0].UnitPrice.Units) +
+		float64(SKUPriceList[cpuSKUId].PricingExpression.TieredRates[0].UnitPrice.Nanos)*1e-9)
+
+	p.ComputePrice += price
+
+	price = r.RAM * (float64(SKUPriceList[ramSKUId].PricingExpression.TieredRates[0].UnitPrice.Units) +
+		float64(SKUPriceList[ramSKUId].PricingExpression.TieredRates[0].UnitPrice.Nanos)*1e-9)
+
+	p.ComputePrice += price
+
+	p.applySUD(r.Billing, r.Hours, r.Family)
+	p.applyOsPrice(r)
+	p.ComputePrice, p.EffectiveTime = p.ComputePrice*float64(r.Instances), SKUPriceList[cpuSKUId].EffectiveTime
+
+	p.Currency = "USD"
+	return p, nil
+
+	/*foundCPU, foundRAM, foundOS := false, false, false
 
 	if r.Os == "linux" {
 		foundOS = true
@@ -81,7 +95,7 @@ func getPrice(svc *cloudbilling.APIService, r Request) (p Price, err error) {
 	if err != nil {
 		return p, err
 	}
-
+	*/
 	p.Currency = "USD"
 	return p, nil
 }
@@ -116,7 +130,7 @@ func getSUD(h float64) (r SUD) {
 func (p *Price) applySUD(b string, h float64, t string) {
 	sud := getSUD(h)
 
-	if b != "SUD" {
+	if b != "sud" {
 		sud.Percentage[0] = 1
 		sud.Percentage[1] = 1
 		sud.Percentage[2] = 1
