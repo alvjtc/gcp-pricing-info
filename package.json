@@ -5,6 +5,16 @@
     "semantic-release": "^17.0.0"
   },
   "release": {
-    "branches": ["main", "beta","alpha"]
+    "branches": [
+      "main",
+      {
+        "name": "beta",
+        "prerelease": true
+      },
+      {
+        "name": "alpha",
+        "prerelease": true
+      }
+    ]
   }
 }
